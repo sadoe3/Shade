@@ -36,3 +36,8 @@ _ReSharper*/
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Personal maps and their World Partition external packages stay local.
+/Content/Developers/
+/Content/__ExternalActors__/Developers/
+/Content/__ExternalObjects__/Developers/
