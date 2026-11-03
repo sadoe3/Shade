@@ -3,21 +3,21 @@
 #include "CoreMinimal.h"
 #include "AttributeSet.h"
 #include "AbilitySystemComponent.h"
-#include "ShadeHealthSet.generated.h"
+#include "ShadeAttributeSet.generated.h"
 
 #define SHADE_ATTRIBUTE_ACCESSORS(PropertyName) \
-    GAMEPLAYATTRIBUTE_PROPERTY_GETTER(UShadeHealthSet, PropertyName) \
+    GAMEPLAYATTRIBUTE_PROPERTY_GETTER(UShadeAttributeSet, PropertyName) \
     GAMEPLAYATTRIBUTE_VALUE_GETTER(PropertyName) \
     GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
     GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
 UCLASS()
-class SHADE_API UShadeHealthSet : public UAttributeSet
+class SHADE_API UShadeAttributeSet : public UAttributeSet
 {
     GENERATED_BODY()
 
 public:
-    UShadeHealthSet();
+    UShadeAttributeSet();
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
     UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_Health, Category="Health")
