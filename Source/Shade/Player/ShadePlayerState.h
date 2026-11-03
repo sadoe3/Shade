@@ -7,6 +7,7 @@
 
 class UAbilitySystemComponent;
 class UShadeAttributeSet;
+class UShadeInitialAttributesData;
 
 UCLASS()
 class SHADE_API AShadePlayerState : public APlayerState, public IAbilitySystemInterface
@@ -19,10 +20,19 @@ public:
     virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
     UShadeAttributeSet* GetAttributeSet() const;
 
+    // Refreshes the Avatar; initial attributes are applied once on authority.
+    void InitializeAbilitySystem(AActor* Avatar);
+
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="GAS")
     TObjectPtr<UAbilitySystemComponent> AbilitySystem;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="GAS")
     TObjectPtr<UShadeAttributeSet> AttributeSet;
+
+    UPROPERTY(EditDefaultsOnly, Category="GAS")
+    TObjectPtr<UShadeInitialAttributesData> InitialAttributesData;
+
+private:
+    bool bAttributesInitialized = false;
 };
