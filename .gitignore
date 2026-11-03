@@ -41,3 +41,6 @@ Desktop.ini
 /Content/Developers/
 /Content/__ExternalActors__/Developers/
 /Content/__ExternalObjects__/Developers/
+
+# Per-machine Engine overrides, including local Android File Server credentials.
+/Config/UserEngine.ini
