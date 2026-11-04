@@ -28,9 +28,14 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category="Input")
     TObjectPtr<UInputAction> LookAction;
 
+    UPROPERTY(EditDefaultsOnly, Category="Input")
+    TObjectPtr<UInputAction> RunAction;
+
 private:
     void Move(const FInputActionValue& Value);
     void Look(const FInputActionValue& Value);
+    void StartRunning();
+    void StopRunning();
 
     TWeakObjectPtr<UEnhancedInputLocalPlayerSubsystem> RegisteredInputSubsystem;
 };

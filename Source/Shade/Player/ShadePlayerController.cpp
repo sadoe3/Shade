@@ -1,5 +1,7 @@
 #include "ShadePlayerController.h"
 
+#include "../Character/ShadePlayerCharacter.h"
+
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
@@ -30,20 +32,25 @@ void AShadePlayerController::SetupInputComponent()
 {
     Super::SetupInputComponent();
     auto* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent);
-    if (!EnhancedInput || !MoveAction || !LookAction ||
+    if (!EnhancedInput || !MoveAction || !LookAction || !RunAction ||
         MoveAction->ValueType != EInputActionValueType::Axis2D ||
-        LookAction->ValueType != EInputActionValueType::Axis2D)
+        LookAction->ValueType != EInputActionValueType::Axis2D ||
+        RunAction->ValueType != EInputActionValueType::Boolean)
     {
-        UE_LOG(LogTemp, Error, TEXT("%s requires EnhancedInputComponent and Axis2D Move/Look actions."), *GetName());
+        UE_LOG(LogTemp, Error, TEXT("%s requires EnhancedInputComponent with Axis2D Move/Look and Boolean Run actions."), *GetName());
         return;
     }
 
     EnhancedInput->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ThisClass::Move);
     EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &ThisClass::Look);
+    EnhancedInput->BindAction(RunAction, ETriggerEvent::Started, this, &ThisClass::StartRunning);
+    EnhancedInput->BindAction(RunAction, ETriggerEvent::Completed, this, &ThisClass::StopRunning);
+    EnhancedInput->BindAction(RunAction, ETriggerEvent::Canceled, this, &ThisClass::StopRunning);
 }
 
 void AShadePlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+    StopRunning();
     if (auto* Subsystem = RegisteredInputSubsystem.Get())
     {
         Subsystem->RemoveMappingContext(PlayerMappingContext);
@@ -70,4 +77,20 @@ void AShadePlayerController::Look(const FInputActionValue& Value)
     const FVector2D Input = Value.Get<FVector2D>();
     AddYawInput(Input.X);
     AddPitchInput(Input.Y);
+}
+
+void AShadePlayerController::StartRunning()
+{
+    if (auto* ControlledCharacter = Cast<AShadePlayerCharacter>(GetPawn()))
+    {
+        ControlledCharacter->SetRunning(true);
+    }
+}
+
+void AShadePlayerController::StopRunning()
+{
+    if (auto* ControlledCharacter = Cast<AShadePlayerCharacter>(GetPawn()))
+    {
+        ControlledCharacter->SetRunning(false);
+    }
 }

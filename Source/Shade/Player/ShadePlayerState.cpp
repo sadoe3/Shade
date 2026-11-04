@@ -25,6 +25,11 @@ UShadeAttributeSet* AShadePlayerState::GetAttributeSet() const
     return AttributeSet;
 }
 
+const UShadeInitialAttributesData* AShadePlayerState::GetInitialAttributesData() const
+{
+    return InitialAttributesData;
+}
+
 void AShadePlayerState::InitializeAbilitySystem(AActor* Avatar)
 {
     if (!IsValid(Avatar))

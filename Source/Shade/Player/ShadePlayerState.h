@@ -19,6 +19,7 @@ public:
 
     virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
     UShadeAttributeSet* GetAttributeSet() const;
+    const UShadeInitialAttributesData* GetInitialAttributesData() const;
 
     // Refreshes the Avatar; initial attributes are applied once on authority.
     void InitializeAbilitySystem(AActor* Avatar);

@@ -19,6 +19,9 @@ public:
     virtual void OnRep_PlayerState() override;
     virtual void UnPossessed() override;
 
+    // Selects the configured movement speed; input binding is handled by the Controller.
+    void SetRunning(bool bRunning);
+
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera")
     TObjectPtr<USpringArmComponent> CameraBoom;

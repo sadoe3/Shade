@@ -61,12 +61,15 @@ bool FShadePlayerInputTest::RunTest(const FString& Parameters)
 
         const FVector OriginalLocation = Body->GetActorLocation();
         const FRotator OriginalRotation = PC->GetControlRotation();
+        const FRotator OriginalBodyRotation = Body->GetActorRotation();
         ON_SCOPE_EXIT
         {
             Input->FlushPressedKeys();
+            Body->SetRunning(false);
             Body->ConsumeMovementInputVector();
             Body->GetCharacterMovement()->StopMovementImmediately();
             Body->SetActorLocation(OriginalLocation);
+            Body->SetActorRotation(OriginalBodyRotation);
             PC->SetControlRotation(OriginalRotation);
         };
         const TArray<UInputComponent*> Stack{PC->InputComponent};
@@ -105,6 +108,46 @@ bool FShadePlayerInputTest::RunTest(const FString& Parameters)
         TestTrue(TEXT("CharacterMovement moves the possessed body"), Body->GetActorLocation().X > BeforeMove.X);
         Key(EKeys::W, IE_Released, 0.f);
         Process();
+
+        Body->ConsumeMovementInputVector();
+        auto* Movement = Body->GetCharacterMovement();
+        Movement->StopMovementImmediately();
+        TestEqual(TEXT("Character starts at configured walking speed"), Movement->MaxWalkSpeed, 250.f);
+        Key(EKeys::LeftShift, IE_Pressed, 1.f);
+        Process();
+        TestEqual(TEXT("Left Shift Started selects running speed"), Movement->MaxWalkSpeed, 550.f);
+        TestTrue(TEXT("Shift alone does not request movement"), Body->ConsumeMovementInputVector().IsNearlyZero());
+
+        Key(EKeys::W, IE_Pressed, 1.f);
+        for (int32 Frame = 0; Frame < 60; ++Frame)
+        {
+            Process();
+            Movement->TickComponent(1.f / 60.f, LEVELTICK_All, nullptr);
+        }
+        TestTrue(TEXT("Held W and Shift reach running speed"),
+            FMath::IsNearlyEqual(Body->GetVelocity().Size2D(), 550.f, 1.f));
+        Key(EKeys::LeftShift, IE_Released, 0.f);
+        Process();
+        TestEqual(TEXT("Shift Completed restores walking speed"), Movement->MaxWalkSpeed, 250.f);
+        Body->ConsumeMovementInputVector();
+        for (int32 Frame = 0; Frame < 60; ++Frame)
+        {
+            Process();
+            Movement->TickComponent(1.f / 60.f, LEVELTICK_All, nullptr);
+        }
+        TestTrue(TEXT("Held W returns to walking speed after releasing Shift"),
+            FMath::IsNearlyEqual(Body->GetVelocity().Size2D(), 250.f, 1.f));
+        Key(EKeys::W, IE_Released, 0.f);
+        Process();
+        Body->ConsumeMovementInputVector();
+        Movement->StopMovementImmediately();
+
+        Key(EKeys::LeftShift, IE_Pressed, 1.f);
+        Process();
+        TestEqual(TEXT("Shift can start running again"), Movement->MaxWalkSpeed, 550.f);
+        Input->FlushPressedKeys();
+        Process();
+        TestEqual(TEXT("Flushing held keys returns to walking"), Movement->MaxWalkSpeed, 250.f);
 
         PC->SetControlRotation(FRotator::ZeroRotator);
         Key(EKeys::MouseX, IE_Axis, 10.f);
