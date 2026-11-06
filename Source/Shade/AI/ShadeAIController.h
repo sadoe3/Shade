@@ -7,6 +7,7 @@
 
 class AShadeEnemyCharacter;
 class UAbilitySystemComponent;
+class UBehaviorTree;
 
 UCLASS()
 class SHADE_API AShadeAIController : public AAIController
@@ -29,7 +30,12 @@ protected:
     virtual void OnUnPossess() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI")
+    TObjectPtr<UBehaviorTree> BehaviorTreeAsset;
+
 private:
+    void TryStartBehavior();
+    void UpdateBlackboard();
     void ReleaseEnemy();
     void OnDeadTagChanged(const FGameplayTag Tag, int32 Count);
     void StopObserving();
@@ -40,4 +46,5 @@ private:
     FVector HomeLocation = FVector::ZeroVector;
     FVector LastKnownLocation = FVector::ZeroVector;
     bool bHasLastKnownLocation = false;
+    bool bBehaviorStartAttempted = false;
 };

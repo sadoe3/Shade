@@ -3,6 +3,13 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "BrainComponent.h"
+#include "BehaviorTree/BehaviorTree.h"
+#include "BehaviorTree/BlackboardComponent.h"
+#include "BehaviorTree/Blackboard/BlackboardKeyType_Object.h"
+#include "BehaviorTree/Blackboard/BlackboardKeyType_Vector.h"
+#include "BehaviorTree/Blackboard/BlackboardKeyType_Float.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "../AbilitySystem/Data/ShadeInitialAttributesData.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "ShadeAwarenessComponent.h"
@@ -42,11 +49,13 @@ void AShadeAIController::OnPossess(APawn* InPawn)
     }
     SetActorTickInterval(Data->SightUpdateInterval);
     SetActorTickEnabled(!Enemy->IsDead());
+    TryStartBehavior();
 }
 
 void AShadeAIController::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+    TryStartBehavior();
     // Target selection is intentionally the single local Player for this prototype.
     ObserveTarget(UGameplayStatics::GetPlayerPawn(this, 0));
 }
@@ -86,6 +95,7 @@ void AShadeAIController::ObserveTarget(APawn* Target)
         LastKnownLocation = Target->GetActorLocation();
         bHasLastKnownLocation = true;
     }
+    UpdateBlackboard();
 }
 
 APawn* AShadeAIController::GetChaseTarget() const
@@ -100,6 +110,7 @@ void AShadeAIController::CompleteSearch()
 {
     if (GetChaseTarget()) return;
     bHasLastKnownLocation = false;
+    UpdateBlackboard();
 }
 
 void AShadeAIController::OnDeadTagChanged(const FGameplayTag Tag, int32 Count)
@@ -111,6 +122,8 @@ void AShadeAIController::StopObserving()
 {
     SetActorTickEnabled(false);
     VisibleTarget.Reset();
+    bHasLastKnownLocation = false;
+    UpdateBlackboard();
     StopMovement();
     if (GetBrainComponent()) GetBrainComponent()->StopLogic(TEXT("Enemy observation ended"));
     if (auto* Enemy = ObservedEnemy.Get()) Enemy->GetAwarenessComponent()->SetTargetVisible(false);
@@ -126,7 +139,7 @@ void AShadeAIController::ReleaseEnemy()
     DeadHandle.Reset();
     ObservedAbilitySystem.Reset();
     ObservedEnemy.Reset();
-    bHasLastKnownLocation = false;
+    bBehaviorStartAttempted = false;
 }
 
 void AShadeAIController::OnUnPossess()
@@ -139,4 +152,56 @@ void AShadeAIController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     ReleaseEnemy();
     Super::EndPlay(EndPlayReason);
+}
+
+void AShadeAIController::TryStartBehavior()
+{
+    auto* Enemy = ObservedEnemy.Get();
+    // OnPossess can precede the Enemy's BeginPlay. Tick retries only until GAS is ready.
+    if (bBehaviorStartAttempted || !BehaviorTreeAsset || !Enemy || Enemy->IsDead() ||
+        !Enemy->GetAwarenessComponent()->IsInitialized()) return;
+    bBehaviorStartAttempted = true;
+    const auto* Data = Enemy->GetBehaviorData();
+    if (!BehaviorTreeAsset->BlackboardAsset || !BehaviorTreeAsset->RootNode ||
+        !FMath::IsFinite(Data->SearchDuration) || Data->SearchDuration < 0.f)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%s: Enemy behavior requires a tree root, Blackboard, and valid search duration."), *GetName());
+        return;
+    }
+    UBlackboardComponent* BlackboardComponent = nullptr;
+    if (!UseBlackboard(BehaviorTreeAsset->BlackboardAsset, BlackboardComponent) || !BlackboardComponent) return;
+    const bool bValidKeys =
+        BlackboardComponent->GetKeyType(BlackboardComponent->GetKeyID(TEXT("TargetActor"))) == UBlackboardKeyType_Object::StaticClass() &&
+        BlackboardComponent->GetKeyType(BlackboardComponent->GetKeyID(TEXT("LastKnownLocation"))) == UBlackboardKeyType_Vector::StaticClass() &&
+        BlackboardComponent->GetKeyType(BlackboardComponent->GetKeyID(TEXT("HomeLocation"))) == UBlackboardKeyType_Vector::StaticClass() &&
+        BlackboardComponent->GetKeyType(BlackboardComponent->GetKeyID(TEXT("SearchDuration"))) == UBlackboardKeyType_Float::StaticClass();
+    if (!bValidKeys)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%s: Enemy Blackboard must define TargetActor, LastKnownLocation, HomeLocation, and SearchDuration."), *GetName());
+        return;
+    }
+    BlackboardComponent->SetValueAsVector(TEXT("HomeLocation"), HomeLocation);
+    BlackboardComponent->SetValueAsFloat(TEXT("SearchDuration"), Data->SearchDuration);
+    UpdateBlackboard();
+    if (!RunBehaviorTree(BehaviorTreeAsset))
+    {
+        UE_LOG(LogTemp, Error, TEXT("%s: Enemy behavior tree could not start."), *GetName());
+    }
+}
+
+void AShadeAIController::UpdateBlackboard()
+{
+    if (auto* BlackboardComponent = GetBlackboardComponent())
+    {
+        BlackboardComponent->SetValueAsObject(TEXT("TargetActor"), GetChaseTarget());
+        if (bHasLastKnownLocation) BlackboardComponent->SetValueAsVector(TEXT("LastKnownLocation"), LastKnownLocation);
+        else BlackboardComponent->ClearValue(TEXT("LastKnownLocation"));
+    }
+    if (auto* Enemy = ObservedEnemy.Get(); Enemy && !Enemy->IsDead())
+    {
+        if (const auto* MovementData = Enemy->GetInitialAttributesData())
+        {
+            Enemy->GetCharacterMovement()->MaxWalkSpeed = GetChaseTarget() ? MovementData->RunSpeed : MovementData->WalkSpeed;
+        }
+    }
 }
