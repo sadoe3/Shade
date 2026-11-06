@@ -45,6 +45,7 @@ private:
     FDelegateHandle DeadHandle;
     FVector HomeLocation = FVector::ZeroVector;
     FVector LastKnownLocation = FVector::ZeroVector;
+    FVector LastVisibleLocation = FVector::ZeroVector;
     bool bHasLastKnownLocation = false;
     bool bBehaviorStartAttempted = false;
 };

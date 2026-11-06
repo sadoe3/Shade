@@ -86,14 +86,24 @@ void AShadeAIController::ObserveTarget(APawn* Target)
     auto* Enemy = ObservedEnemy.Get();
     auto* Awareness = Enemy ? Enemy->GetAwarenessComponent() : nullptr;
     if (!Enemy || Enemy->IsDead() || !Awareness || !Awareness->IsInitialized()) return;
+    // A periodic GE can reach Alert between sight samples. Promote the previous visible
+    // snapshot before clearing its Actor reference; the hidden Actor may have already moved.
+    if (GetChaseTarget())
+    {
+        LastKnownLocation = LastVisibleLocation;
+        bHasLastKnownLocation = true;
+    }
     const bool bVisible = CanSeeTarget(Target);
     Awareness->SetTargetVisible(bVisible);
     VisibleTarget = bVisible ? Target : nullptr;
-    if (GetChaseTarget())
+    if (bVisible)
     {
-        // Freeze this position when observation is lost; never track a hidden Actor's live transform.
-        LastKnownLocation = Target->GetActorLocation();
-        bHasLastKnownLocation = true;
+        LastVisibleLocation = Target->GetActorLocation();
+        if (GetChaseTarget())
+        {
+            LastKnownLocation = LastVisibleLocation;
+            bHasLastKnownLocation = true;
+        }
     }
     UpdateBlackboard();
 }
