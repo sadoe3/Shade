@@ -1,4 +1,11 @@
 #include "ShadePlayerController.h"
+#include "ShadePlayerState.h"
+#include "../Character/ShadeEnemyCharacter.h"
+#include "../AbilitySystem/ShadeAssassinateAbility.h"
+#include "../AbilitySystem/ShadeStealthTags.h"
+#include "../AbilitySystem/Data/ShadeAssassinationData.h"
+#include "AbilitySystemComponent.h"
+#include "EngineUtils.h"
 
 #include "../Character/ShadePlayerCharacter.h"
 
@@ -35,12 +42,17 @@ void AShadePlayerController::SetupInputComponent()
     if (!EnhancedInput || !MoveAction || !LookAction || !RunAction ||
         MoveAction->ValueType != EInputActionValueType::Axis2D ||
         LookAction->ValueType != EInputActionValueType::Axis2D ||
-        RunAction->ValueType != EInputActionValueType::Boolean)
+        RunAction->ValueType != EInputActionValueType::Boolean ||
+        (AssassinateAction && AssassinateAction->ValueType != EInputActionValueType::Boolean))
     {
-        UE_LOG(LogTemp, Error, TEXT("%s requires EnhancedInputComponent with Axis2D Move/Look and Boolean Run actions."), *GetName());
+        UE_LOG(LogTemp, Error, TEXT("%s requires EnhancedInputComponent with Axis2D Move/Look and Boolean Run/Assassinate actions."), *GetName());
         return;
     }
 
+    if (AssassinateAction)
+    {
+        EnhancedInput->BindAction(AssassinateAction, ETriggerEvent::Started, this, &ThisClass::Assassinate);
+    }
     EnhancedInput->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ThisClass::Move);
     EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &ThisClass::Look);
     EnhancedInput->BindAction(RunAction, ETriggerEvent::Started, this, &ThisClass::StartRunning);
@@ -93,4 +105,28 @@ void AShadePlayerController::StopRunning()
     {
         ControlledCharacter->SetRunning(false);
     }
+}
+
+void AShadePlayerController::Assassinate()
+{
+    auto* State = GetPlayerState<AShadePlayerState>();
+    const auto* Settings = State ? State->GetAssassinationData() : nullptr;
+    APawn* Body = GetPawn();
+    if (!HasAuthority() || !Body || !Settings) return;
+    AShadeEnemyCharacter* Best = nullptr;
+    float BestDistance = TNumericLimits<float>::Max();
+    for (TActorIterator<AShadeEnemyCharacter> It(GetWorld()); It; ++It)
+    {
+        const float Distance = FVector::DistSquared(Body->GetActorLocation(), It->GetActorLocation());
+        if (Distance < BestDistance && UShadeAssassinateAbility::IsValidTarget(Body, *It, Settings->Range))
+        {
+            Best = *It;
+            BestDistance = Distance;
+        }
+    }
+    if (!Best) return;
+    FGameplayEventData Payload;
+    Payload.Instigator = Body;
+    Payload.Target = Best;
+    State->GetAbilitySystemComponent()->HandleGameplayEvent(ShadeStealthTags::Event_Assassinate, &Payload);
 }

@@ -1,4 +1,6 @@
 #include "ShadePlayerState.h"
+#include "../AbilitySystem/ShadeAssassinateAbility.h"
+#include "../AbilitySystem/Data/ShadeAssassinationData.h"
 
 #include "AbilitySystemComponent.h"
 #include "../AbilitySystem/ShadeAttributeSet.h"
@@ -38,6 +40,12 @@ void AShadePlayerState::InitializeAbilitySystem(AActor* Avatar)
     }
 
     AbilitySystem->InitAbilityActorInfo(this, Avatar);
+
+    if (HasAuthority() && AssassinationData &&
+        !AbilitySystem->FindAbilitySpecFromClass(UShadeAssassinateAbility::StaticClass()))
+    {
+        AbilitySystem->GiveAbility(FGameplayAbilitySpec(UShadeAssassinateAbility::StaticClass(), 1, INDEX_NONE, AssassinationData));
+    }
 
     if (!HasAuthority() || bAttributesInitialized)
     {

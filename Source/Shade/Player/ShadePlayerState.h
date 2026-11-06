@@ -8,6 +8,7 @@
 class UAbilitySystemComponent;
 class UShadeAttributeSet;
 class UShadeInitialAttributesData;
+class UShadeAssassinationData;
 
 UCLASS()
 class SHADE_API AShadePlayerState : public APlayerState, public IAbilitySystemInterface
@@ -21,6 +22,8 @@ public:
     UShadeAttributeSet* GetAttributeSet() const;
     const UShadeInitialAttributesData* GetInitialAttributesData() const;
 
+    const UShadeAssassinationData* GetAssassinationData() const { return AssassinationData; }
+
     // Refreshes the Avatar; initial attributes are applied once on authority.
     void InitializeAbilitySystem(AActor* Avatar);
 
@@ -33,6 +36,9 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, Category="GAS")
     TObjectPtr<UShadeInitialAttributesData> InitialAttributesData;
+
+    UPROPERTY(EditDefaultsOnly, Category="GAS")
+    TObjectPtr<UShadeAssassinationData> AssassinationData;
 
 private:
     bool bAttributesInitialized = false;

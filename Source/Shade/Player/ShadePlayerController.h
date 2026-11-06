@@ -31,7 +31,11 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category="Input")
     TObjectPtr<UInputAction> RunAction;
 
+    UPROPERTY(EditDefaultsOnly, Category="Input")
+    TObjectPtr<UInputAction> AssassinateAction;
+
 private:
+    void Assassinate();
     void Move(const FInputActionValue& Value);
     void Look(const FInputActionValue& Value);
     void StartRunning();
