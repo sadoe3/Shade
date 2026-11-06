@@ -3,6 +3,7 @@
 #include "ShadeGameplayTags.h"
 #include "ShadeAttributeSet.h"
 #include "AbilitySystemComponent.h"
+#include "GameplayEffectComponents/TargetTagsGameplayEffectComponent.h"
 
 UShadeInitialHealthEffect::UShadeInitialHealthEffect()
 {
@@ -34,10 +35,21 @@ UShadeHealthChangeEffect::UShadeHealthChangeEffect()
     Modifiers.Add(Modifier);
 }
 
+UShadeDeadEffect::UShadeDeadEffect()
+{
+    DurationPolicy = EGameplayEffectDurationType::Infinite;
+    FInheritedTagContainer GrantedTags;
+    GrantedTags.AddTag(ShadeGameplayTags::State_Dead);
+    auto* DeadTags = CreateDefaultSubobject<UTargetTagsGameplayEffectComponent>(TEXT("DeadTags"));
+    GEComponents.Add(DeadTags);
+    DeadTags->SetAndApplyTargetTagChanges(GrantedTags);
+}
+
 bool ShadeHealthEffects::ApplyHealthChange(UAbilitySystemComponent* Target, float Delta)
 {
     if (!IsValid(Target) || !Target->IsOwnerActorAuthoritative() || !FMath::IsFinite(Delta) ||
-        !Target->GetSet<UShadeAttributeSet>()) return false;
+        !Target->GetSet<UShadeAttributeSet>() ||
+        Target->HasMatchingGameplayTag(ShadeGameplayTags::State_Dead)) return false;
     FGameplayEffectSpecHandle Spec = Target->MakeOutgoingSpec(
         UShadeHealthChangeEffect::StaticClass(), 1.f, Target->MakeEffectContext());
     if (!Spec.IsValid()) return false;

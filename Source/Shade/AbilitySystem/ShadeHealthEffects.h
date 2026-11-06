@@ -23,6 +23,15 @@ public:
     UShadeHealthChangeEffect();
 };
 
+// Death persists on the ASC across body replacement. There is no revival policy yet.
+UCLASS()
+class SHADE_API UShadeDeadEffect : public UGameplayEffect
+{
+    GENERATED_BODY()
+public:
+    UShadeDeadEffect();
+};
+
 class UAbilitySystemComponent;
 namespace ShadeHealthEffects
 {
