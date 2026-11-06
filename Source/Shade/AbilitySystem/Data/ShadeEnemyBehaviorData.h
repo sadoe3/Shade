@@ -25,4 +25,16 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Awareness", meta=(ClampMin="0.01", Units="s"))
     float AlertnessUpdatePeriod = 0.1f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Sight", meta=(ClampMin="1.0", Units="cm"))
+    float SightRadius = 1600.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Sight", meta=(ClampMin="1.0", ClampMax="179.0", Units="deg"))
+    float SightHalfAngleDegrees = 60.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Sight", meta=(ClampMin="0.01", Units="s"))
+    float SightUpdateInterval = 0.1f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Search", meta=(ClampMin="0.0", Units="s"))
+    float SearchDuration = 3.f;
 };
