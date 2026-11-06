@@ -8,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AbilitySystemComponent.h"
 #include "../AbilitySystem/Data/ShadeInitialAttributesData.h"
+#include "../AbilitySystem/Data/ShadeEnemyBehaviorData.h"
 #include "../AbilitySystem/ShadeAttributeSet.h"
 #include "../Character/ShadeEnemyCharacter.h"
 
@@ -55,6 +56,11 @@ bool FShadeEnemyInitializationTest::RunTest(const FString& Parameters)
     Settings->BrakingDecelerationWalking = 1600.f;
     SettingsProperty->SetObjectPropertyValue_InContainer(First, Settings);
     SettingsProperty->SetObjectPropertyValue_InContainer(Second, Settings);
+    auto* BehaviorProperty = FindFProperty<FObjectPropertyBase>(AShadeEnemyCharacter::StaticClass(), TEXT("BehaviorData"));
+    if (!TestNotNull(TEXT("Behavior data property"), BehaviorProperty)) return false;
+    auto* Behavior = NewObject<UShadeEnemyBehaviorData>(World);
+    BehaviorProperty->SetObjectPropertyValue_InContainer(First, Behavior);
+    BehaviorProperty->SetObjectPropertyValue_InContainer(Second, Behavior);
     First->DispatchBeginPlay();
     Second->DispatchBeginPlay();
 
@@ -76,6 +82,7 @@ bool FShadeEnemyInitializationTest::RunTest(const FString& Parameters)
     Unconfigured->InitializeAbilitySystem();
     TestEqual(TEXT("Missing settings leave Health uninitialized"), Unconfigured->GetAttributeSet()->GetHealth(), 0.f);
     SettingsProperty->SetObjectPropertyValue_InContainer(Unconfigured, Settings);
+    BehaviorProperty->SetObjectPropertyValue_InContainer(Unconfigured, Behavior);
     Unconfigured->InitializeAbilitySystem();
     TestEqual(TEXT("Correcting settings permits initialization"), Unconfigured->GetAttributeSet()->GetHealth(), 150.f);
     First->Destroy();

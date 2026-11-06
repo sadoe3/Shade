@@ -6,6 +6,9 @@
 #include "../AbilitySystem/ShadeAttributeSet.h"
 #include "../AbilitySystem/ShadeGameplayTags.h"
 #include "../AbilitySystem/ShadeHealthEffects.h"
+#include "../AbilitySystem/ShadeAwarenessSet.h"
+#include "../AbilitySystem/Data/ShadeEnemyBehaviorData.h"
+#include "../AI/ShadeAwarenessComponent.h"
 
 AShadeEnemyCharacter::AShadeEnemyCharacter()
 {
@@ -13,6 +16,8 @@ AShadeEnemyCharacter::AShadeEnemyCharacter()
     OwnedAbilitySystem->SetIsReplicated(true);
     OwnedAbilitySystem->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
     AttributeSet = CreateDefaultSubobject<UShadeAttributeSet>(TEXT("AttributeSet"));
+    AwarenessSet = CreateDefaultSubobject<UShadeAwarenessSet>(TEXT("AwarenessSet"));
+    AwarenessComponent = CreateDefaultSubobject<UShadeAwarenessComponent>(TEXT("AwarenessComponent"));
 
     bUseControllerRotationPitch = false;
     bUseControllerRotationYaw = false;
@@ -49,6 +54,7 @@ void AShadeEnemyCharacter::InitializeAbilitySystem()
     if (!HasAuthority() || bAttributesInitialized)
     {
         ConnectAbilitySystem(OwnedAbilitySystem);
+        AwarenessComponent->Initialize(OwnedAbilitySystem, BehaviorData);
         return;
     }
 
@@ -87,5 +93,6 @@ void AShadeEnemyCharacter::InitializeAbilitySystem()
         GetCharacterMovement()->BrakingDecelerationWalking = InitialAttributesData->BrakingDecelerationWalking;
         // Shared life-state observers see initialized Health, not the zero placeholder.
         ConnectAbilitySystem(OwnedAbilitySystem);
+        AwarenessComponent->Initialize(OwnedAbilitySystem, BehaviorData);
     }
 }
