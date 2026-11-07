@@ -4,7 +4,7 @@
 
 UShadeAttributeSet::UShadeAttributeSet()
 {
-    // GameplayEffects will initialize the live player's health in a later step.
+    // Zero Health is the uninitialized state; the initial GE supplies the live values.
     InitMaxHealth(100.f);
     InitHealth(0.f);
 }
@@ -24,4 +24,45 @@ void UShadeAttributeSet::OnRep_Health(const FGameplayAttributeData& OldValue) co
 void UShadeAttributeSet::OnRep_MaxHealth(const FGameplayAttributeData& OldValue) const
 {
     GAMEPLAYATTRIBUTE_REPNOTIFY(UShadeAttributeSet, MaxHealth, OldValue);
+}
+
+void UShadeAttributeSet::ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const
+{
+    if (Attribute == GetHealthAttribute())
+    {
+        NewValue = FMath::IsFinite(NewValue) ? FMath::Clamp(NewValue, 0.f, GetMaxHealth()) : 0.f;
+    }
+    else if (Attribute == GetMaxHealthAttribute())
+    {
+        NewValue = FMath::IsFinite(NewValue) ? FMath::Max(NewValue, 1.f) : 1.f;
+    }
+}
+
+void UShadeAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
+{
+    Super::PreAttributeChange(Attribute, NewValue);
+    ClampAttribute(Attribute, NewValue);
+}
+
+void UShadeAttributeSet::PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const
+{
+    Super::PreAttributeBaseChange(Attribute, NewValue);
+    ClampAttribute(Attribute, NewValue);
+}
+
+void UShadeAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)
+{
+    Super::PostAttributeChange(Attribute, OldValue, NewValue);
+    // Current Health has no duration modifier in this project.
+    if (Attribute == GetMaxHealthAttribute() && GetHealth() > NewValue)
+    {
+        SetHealth(NewValue);
+    }
+}
+
+void UShadeAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
+{
+    Super::PostGameplayEffectExecute(Data);
+    // TODO: Handle death from the final Health after GE execution.
+    // GAS already applied the modifier; do not apply damage or clamp Health again here.
 }

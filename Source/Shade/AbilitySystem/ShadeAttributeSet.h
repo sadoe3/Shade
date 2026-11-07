@@ -18,6 +18,10 @@ class SHADE_API UShadeAttributeSet : public UAttributeSet
 
 public:
     UShadeAttributeSet();
+    virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
+    virtual void PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const override;
+    virtual void PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue) override;
+    virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
     UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_Health, Category="Health")
@@ -29,6 +33,7 @@ public:
     SHADE_ATTRIBUTE_ACCESSORS(MaxHealth)
 
 private:
+    void ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const;
     UFUNCTION() void OnRep_Health(const FGameplayAttributeData& OldValue) const;
     UFUNCTION() void OnRep_MaxHealth(const FGameplayAttributeData& OldValue) const;
 };
