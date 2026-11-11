@@ -51,3 +51,17 @@ UShadeAwarenessAlertEffect::UShadeAwarenessAlertEffect()
 {
     GEComponents.Add(MakeStateTags(*this, ShadeGameplayTags::State_Awareness_Alert));
 }
+
+UShadeAlertnessTrendEffect::UShadeAlertnessTrendEffect()
+{
+    DurationPolicy = EGameplayEffectDurationType::Infinite;
+    Period = FScalableFloat(0.1f);
+    bExecutePeriodicEffectOnApplication = false;
+    FSetByCallerFloat Change;
+    Change.DataTag = ShadeGameplayTags::Data_Awareness_Change;
+    FGameplayModifierInfo Modifier;
+    Modifier.Attribute = UShadeAwarenessSet::GetAlertnessAttribute();
+    Modifier.ModifierOp = EGameplayModOp::Additive;
+    Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(Change);
+    Modifiers.Add(Modifier);
+}

@@ -34,3 +34,11 @@ class SHADE_API UShadeAwarenessAlertEffect : public UGameplayEffect
 public:
     UShadeAwarenessAlertEffect();
 };
+// SetByCaller magnitude is the signed change per period, not change per second.
+UCLASS()
+class SHADE_API UShadeAlertnessTrendEffect : public UGameplayEffect
+{
+    GENERATED_BODY()
+public:
+    UShadeAlertnessTrendEffect();
+};
