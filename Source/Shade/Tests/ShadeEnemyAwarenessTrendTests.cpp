@@ -125,7 +125,7 @@ bool FShadeEnemyAwarenessTrendTest::RunTest(const FString& Parameters)
         case 3:
             if (State->Elapsed < 0.3f) return false;
             TestEqual(TEXT("Removal does not undo previous periodic changes"), Attributes->GetAlertness(), State->StoppedValue);
-            TestEqual(TEXT("No trend effect remains"), ASC->GetActiveEffects(FGameplayEffectQuery()).Num(), 0);
+            TestEqual(TEXT("Only state effect remains after trend removal"), ASC->GetActiveEffects(FGameplayEffectQuery()).Num(), 1);
             return true;
         }
         return true;

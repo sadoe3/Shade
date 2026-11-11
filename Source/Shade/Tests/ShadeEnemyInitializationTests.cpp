@@ -14,6 +14,8 @@
 #include "../AbilitySystem/ShadeAwarenessEffects.h"
 #include "../AbilitySystem/ShadeGameplayTags.h"
 #include "../Character/ShadeEnemyCharacter.h"
+#include "../AI/ShadeAwarenessComponent.h"
+#include "../AbilitySystem/ShadeHealthEffects.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FShadeEnemyInitializationTest,
     "Shade.Enemy.Initialization",
@@ -124,27 +126,43 @@ bool FShadeEnemyInitializationTest::RunTest(const FString& Parameters)
     Unconfigured->InitializeAbilitySystem();
     TestEqual(TEXT("Awareness recovery preserves live Health"), Unconfigured->GetAttributeSet()->GetHealth(), 80.f);
     TestEqual(TEXT("Correcting settings permits awareness initialization"), Unconfigured->GetAwarenessSet()->GetMaxAlertness(), 150.f);
-    // State effects only represent a state; the later evaluator selects transitions.
-    const TSubclassOf<UGameplayEffect> StateEffects[] = {
-        UShadeAwarenessCalmEffect::StaticClass(), UShadeAwarenessSuspiciousEffect::StaticClass(),
-        UShadeAwarenessAlertEffect::StaticClass() };
-    const FGameplayTag StateTags[] = { ShadeGameplayTags::State_Awareness_Calm,
-        ShadeGameplayTags::State_Awareness_Suspicious, ShadeGameplayTags::State_Awareness_Alert };
-    for (int32 Index = 0; Index < 3; ++Index)
+    const auto CheckState = [this, FirstASC](const FGameplayTag& Expected)
     {
-        const auto StateSpec = FirstASC->MakeOutgoingSpec(StateEffects[Index], 1.f, FirstASC->MakeEffectContext());
-        if (!TestTrue(TEXT("State spec exists"), StateSpec.IsValid())) return false;
-        const auto Handle = FirstASC->ApplyGameplayEffectSpecToSelf(*StateSpec.Data.Get());
-        TestTrue(TEXT("State effect remains active"), Handle.IsValid());
-        TestTrue(TEXT("State effect grants its tag"), FirstASC->HasMatchingGameplayTag(StateTags[Index]));
-        TestFalse(TEXT("State is independent per Enemy"), SecondASC->HasMatchingGameplayTag(StateTags[Index]));
-        TestEqual(TEXT("State representation does not change alertness"), First->GetAwarenessSet()->GetAlertness(), 60.f);
-        FirstASC->RemoveActiveGameplayEffect(Handle);
-        TestFalse(TEXT("Removing state effect removes its tag"), FirstASC->HasMatchingGameplayTag(StateTags[Index]));
-    }
+        const FGameplayTag Tags[] = { ShadeGameplayTags::State_Awareness_Calm,
+            ShadeGameplayTags::State_Awareness_Suspicious, ShadeGameplayTags::State_Awareness_Alert };
+        for (const auto& Tag : Tags)
+            TestEqual(TEXT("Exactly the expected state tag is present"), FirstASC->HasMatchingGameplayTag(Tag), Tag == Expected);
+        TestEqual(TEXT("Only one state effect is active"), FirstASC->GetActiveEffects(FGameplayEffectQuery()).Num(), 1);
+    };
+    CheckState(ShadeGameplayTags::State_Awareness_Suspicious); // Existing live value is 60/150.
+    First->InitializeAbilitySystem();
+    CheckState(ShadeGameplayTags::State_Awareness_Suspicious);
+    FirstASC->SetNumericAttributeBase(UShadeAwarenessSet::GetAlertnessAttribute(), 150.f);
+    CheckState(ShadeGameplayTags::State_Awareness_Alert);
+    FirstASC->SetNumericAttributeBase(UShadeAwarenessSet::GetMaxAlertnessAttribute(), 200.f);
+    CheckState(ShadeGameplayTags::State_Awareness_Suspicious);
+    FirstASC->SetNumericAttributeBase(UShadeAwarenessSet::GetMaxAlertnessAttribute(), 100.f);
+    CheckState(ShadeGameplayTags::State_Awareness_Alert);
+    FirstASC->SetNumericAttributeBase(UShadeAwarenessSet::GetAlertnessAttribute(), 0.f);
+    CheckState(ShadeGameplayTags::State_Awareness_Calm);
+    TestTrue(TEXT("Other Enemy remains independently Calm"), SecondASC->HasMatchingGameplayTag(ShadeGameplayTags::State_Awareness_Calm));
+    First->GetAwarenessComponent()->Shutdown();
+    TestEqual(TEXT("Shutdown removes owned state effect"), FirstASC->GetActiveEffects(FGameplayEffectQuery()).Num(), 0);
+    FirstASC->SetNumericAttributeBase(UShadeAwarenessSet::GetAlertnessAttribute(), 30.f);
+    TestEqual(TEXT("Shutdown unsubscribes attribute changes"), FirstASC->GetActiveEffects(FGameplayEffectQuery()).Num(), 0);
+    First->InitializeAbilitySystem();
+    CheckState(ShadeGameplayTags::State_Awareness_Suspicious);
+    ShadeHealthEffects::ApplyHealthChange(FirstASC, -1000.f);
+    TestFalse(TEXT("Death shuts down awareness"), First->GetAwarenessComponent()->IsInitialized());
+    TestFalse(TEXT("Death removes awareness tag"), FirstASC->HasMatchingGameplayTag(ShadeGameplayTags::State_Awareness_Suspicious));
+    TestTrue(TEXT("Shared dead tag remains"), FirstASC->HasMatchingGameplayTag(ShadeGameplayTags::State_Dead));
+    First->InitializeAbilitySystem();
+    TestFalse(TEXT("Dead Enemy does not restart awareness"), First->GetAwarenessComponent()->IsInitialized());
     First->Destroy();
     TestNull(TEXT("Destroyed body clears its GAS Avatar connection"), FirstASC->GetAvatarActor());
     TestEqual(TEXT("Destroying one Enemy preserves the other"), Second->GetAttributeSet()->GetHealth(), 150.f);
+    Second->Destroy();
+    TestFalse(TEXT("EndPlay removes awareness state"), SecondASC->HasMatchingGameplayTag(ShadeGameplayTags::State_Awareness_Calm));
     return true;
 }
 
