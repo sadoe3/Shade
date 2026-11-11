@@ -4,6 +4,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "../AbilitySystem/Data/ShadeInitialAttributesData.h"
 #include "../AbilitySystem/ShadeAttributeSet.h"
+#include "../AbilitySystem/ShadeAwarenessSet.h"
 #include "../AbilitySystem/ShadeGameplayTags.h"
 #include "../AbilitySystem/ShadeHealthEffects.h"
 
@@ -13,6 +14,7 @@ AShadeEnemyCharacter::AShadeEnemyCharacter()
     OwnedAbilitySystem->SetIsReplicated(true);
     OwnedAbilitySystem->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
     AttributeSet = CreateDefaultSubobject<UShadeAttributeSet>(TEXT("AttributeSet"));
+    AwarenessSet = CreateDefaultSubobject<UShadeAwarenessSet>(TEXT("AwarenessSet"));
 
     bUseControllerRotationPitch = false;
     bUseControllerRotationYaw = false;

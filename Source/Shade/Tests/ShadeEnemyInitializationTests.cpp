@@ -9,6 +9,7 @@
 #include "AbilitySystemComponent.h"
 #include "../AbilitySystem/Data/ShadeInitialAttributesData.h"
 #include "../AbilitySystem/ShadeAttributeSet.h"
+#include "../AbilitySystem/ShadeAwarenessSet.h"
 #include "../Character/ShadeEnemyCharacter.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FShadeEnemyInitializationTest,
@@ -45,6 +46,25 @@ bool FShadeEnemyInitializationTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("ASC owner is the Character"), FirstASC->GetOwner(), static_cast<AActor*>(First));
     TestEqual(TEXT("Owned AttributeSet is registered with the ASC"), FirstASC->GetSet<UShadeAttributeSet>(),
         static_cast<const UShadeAttributeSet*>(First->GetAttributeSet()));
+
+    TestNotEqual(TEXT("Enemies own separate awareness sets"), First->GetAwarenessSet(), Second->GetAwarenessSet());
+    TestEqual(TEXT("Awareness set is registered with ASC"), FirstASC->GetSet<UShadeAwarenessSet>(),
+        static_cast<const UShadeAwarenessSet*>(First->GetAwarenessSet()));
+    TestEqual(TEXT("Initial alertness is zero"), First->GetAwarenessSet()->GetAlertness(), 0.f);
+    FirstASC->SetNumericAttributeBase(UShadeAwarenessSet::GetMaxAlertnessAttribute(), 100.f);
+    FirstASC->SetNumericAttributeBase(UShadeAwarenessSet::GetAlertnessAttribute(), 140.f);
+    TestEqual(TEXT("Alertness current respects maximum"), First->GetAwarenessSet()->GetAlertness(), 100.f);
+    TestEqual(TEXT("Alertness base respects maximum"), First->GetAwarenessSet()->Alertness.GetBaseValue(), 100.f);
+    FirstASC->SetNumericAttributeBase(UShadeAwarenessSet::GetMaxAlertnessAttribute(), 40.f);
+    TestEqual(TEXT("Lower maximum clamps current alertness"), First->GetAwarenessSet()->GetAlertness(), 40.f);
+    TestEqual(TEXT("Lower maximum clamps base alertness"), First->GetAwarenessSet()->Alertness.GetBaseValue(), 40.f);
+    FirstASC->SetNumericAttributeBase(UShadeAwarenessSet::GetMaxAlertnessAttribute(), 80.f);
+    TestEqual(TEXT("Higher maximum does not raise alertness"), First->GetAwarenessSet()->GetAlertness(), 40.f);
+    FirstASC->SetNumericAttributeBase(UShadeAwarenessSet::GetAlertnessAttribute(), -20.f);
+    TestEqual(TEXT("Alertness cannot be negative"), First->GetAwarenessSet()->GetAlertness(), 0.f);
+    FirstASC->SetNumericAttributeBase(UShadeAwarenessSet::GetMaxAlertnessAttribute(), 0.f);
+    TestEqual(TEXT("Maximum remains positive"), First->GetAwarenessSet()->GetMaxAlertness(), 1.f);
+    TestEqual(TEXT("Other Enemy awareness stays independent"), Second->GetAwarenessSet()->GetAlertness(), 0.f);
 
     auto* SettingsProperty = FindFProperty<FObjectPropertyBase>(AShadeEnemyCharacter::StaticClass(), TEXT("InitialAttributesData"));
     if (!TestNotNull(TEXT("Settings property"), SettingsProperty)) return false;
