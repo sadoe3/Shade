@@ -8,6 +8,7 @@ class UAbilitySystemComponent;
 class UShadeAttributeSet;
 class UShadeAwarenessSet;
 class UShadeInitialAttributesData;
+class UShadeEnemyBehaviorData;
 
 UCLASS()
 class SHADE_API AShadeEnemyCharacter : public AShadeCharacterBase
@@ -20,6 +21,7 @@ public:
     UShadeAttributeSet* GetAttributeSet() const;
     UShadeAwarenessSet* GetAwarenessSet() const { return AwarenessSet; }
     const UShadeInitialAttributesData* GetInitialAttributesData() const;
+    const UShadeEnemyBehaviorData* GetBehaviorData() const { return BehaviorData; }
 
     // Establishes this Enemy as both GAS Owner and Avatar. Initial data is applied once.
     void InitializeAbilitySystem();
@@ -39,6 +41,11 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="GAS")
     TObjectPtr<UShadeInitialAttributesData> InitialAttributesData;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI")
+    TObjectPtr<UShadeEnemyBehaviorData> BehaviorData;
+
 private:
+    void InitializeAwareness();
+    bool bAwarenessInitialized = false;
     bool bAttributesInitialized = false;
 };

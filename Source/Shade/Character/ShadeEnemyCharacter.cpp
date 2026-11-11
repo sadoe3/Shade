@@ -5,6 +5,8 @@
 #include "../AbilitySystem/Data/ShadeInitialAttributesData.h"
 #include "../AbilitySystem/ShadeAttributeSet.h"
 #include "../AbilitySystem/ShadeAwarenessSet.h"
+#include "../AbilitySystem/ShadeAwarenessEffects.h"
+#include "../AbilitySystem/Data/ShadeEnemyBehaviorData.h"
 #include "../AbilitySystem/ShadeGameplayTags.h"
 #include "../AbilitySystem/ShadeHealthEffects.h"
 
@@ -51,6 +53,7 @@ void AShadeEnemyCharacter::InitializeAbilitySystem()
     if (!HasAuthority() || bAttributesInitialized)
     {
         ConnectAbilitySystem(OwnedAbilitySystem);
+        if (HasAuthority() && bAttributesInitialized) InitializeAwareness();
         return;
     }
 
@@ -89,5 +92,26 @@ void AShadeEnemyCharacter::InitializeAbilitySystem()
         GetCharacterMovement()->BrakingDecelerationWalking = InitialAttributesData->BrakingDecelerationWalking;
         // Shared life-state observers see initialized Health, not the zero placeholder.
         ConnectAbilitySystem(OwnedAbilitySystem);
+        if (HasAuthority() && bAttributesInitialized) InitializeAwareness();
     }
+}
+
+void AShadeEnemyCharacter::InitializeAwareness()
+{
+    if (bAwarenessInitialized) return;
+    if (!IsValid(BehaviorData))
+    {
+        UE_LOG(LogTemp, Error, TEXT("%s: Enemy BehaviorData must be assigned."), *GetName());
+        return;
+    }
+    if (!FMath::IsFinite(BehaviorData->MaxAlertness) || BehaviorData->MaxAlertness < 1.f)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%s: Enemy MaxAlertness must be finite and at least 1."), *GetName());
+        return;
+    }
+    const auto Spec = OwnedAbilitySystem->MakeOutgoingSpec(
+        UShadeInitialAwarenessEffect::StaticClass(), 1.f, OwnedAbilitySystem->MakeEffectContext());
+    if (!ensure(Spec.IsValid())) return;
+    Spec.Data->SetSetByCallerMagnitude(ShadeGameplayTags::Data_Awareness_Maximum, BehaviorData->MaxAlertness);
+    bAwarenessInitialized = OwnedAbilitySystem->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get()).WasSuccessfullyApplied();
 }
