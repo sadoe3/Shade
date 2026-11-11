@@ -11,6 +11,8 @@
 #include "../AbilitySystem/Data/ShadeEnemyBehaviorData.h"
 #include "../AbilitySystem/ShadeAttributeSet.h"
 #include "../AbilitySystem/ShadeAwarenessSet.h"
+#include "../AbilitySystem/ShadeAwarenessEffects.h"
+#include "../AbilitySystem/ShadeGameplayTags.h"
 #include "../Character/ShadeEnemyCharacter.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FShadeEnemyInitializationTest,
@@ -122,6 +124,24 @@ bool FShadeEnemyInitializationTest::RunTest(const FString& Parameters)
     Unconfigured->InitializeAbilitySystem();
     TestEqual(TEXT("Awareness recovery preserves live Health"), Unconfigured->GetAttributeSet()->GetHealth(), 80.f);
     TestEqual(TEXT("Correcting settings permits awareness initialization"), Unconfigured->GetAwarenessSet()->GetMaxAlertness(), 150.f);
+    // State effects only represent a state; the later evaluator selects transitions.
+    const TSubclassOf<UGameplayEffect> StateEffects[] = {
+        UShadeAwarenessCalmEffect::StaticClass(), UShadeAwarenessSuspiciousEffect::StaticClass(),
+        UShadeAwarenessAlertEffect::StaticClass() };
+    const FGameplayTag StateTags[] = { ShadeGameplayTags::State_Awareness_Calm,
+        ShadeGameplayTags::State_Awareness_Suspicious, ShadeGameplayTags::State_Awareness_Alert };
+    for (int32 Index = 0; Index < 3; ++Index)
+    {
+        const auto StateSpec = FirstASC->MakeOutgoingSpec(StateEffects[Index], 1.f, FirstASC->MakeEffectContext());
+        if (!TestTrue(TEXT("State spec exists"), StateSpec.IsValid())) return false;
+        const auto Handle = FirstASC->ApplyGameplayEffectSpecToSelf(*StateSpec.Data.Get());
+        TestTrue(TEXT("State effect remains active"), Handle.IsValid());
+        TestTrue(TEXT("State effect grants its tag"), FirstASC->HasMatchingGameplayTag(StateTags[Index]));
+        TestFalse(TEXT("State is independent per Enemy"), SecondASC->HasMatchingGameplayTag(StateTags[Index]));
+        TestEqual(TEXT("State representation does not change alertness"), First->GetAwarenessSet()->GetAlertness(), 60.f);
+        FirstASC->RemoveActiveGameplayEffect(Handle);
+        TestFalse(TEXT("Removing state effect removes its tag"), FirstASC->HasMatchingGameplayTag(StateTags[Index]));
+    }
     First->Destroy();
     TestNull(TEXT("Destroyed body clears its GAS Avatar connection"), FirstASC->GetAvatarActor());
     TestEqual(TEXT("Destroying one Enemy preserves the other"), Second->GetAttributeSet()->GetHealth(), 150.f);

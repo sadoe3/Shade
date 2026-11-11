@@ -10,3 +10,27 @@ class SHADE_API UShadeInitialAwarenessEffect : public UGameplayEffect
 public:
     UShadeInitialAwarenessEffect();
 };
+
+UCLASS()
+class SHADE_API UShadeAwarenessCalmEffect : public UGameplayEffect
+{
+    GENERATED_BODY()
+public:
+    UShadeAwarenessCalmEffect();
+};
+
+UCLASS()
+class SHADE_API UShadeAwarenessSuspiciousEffect : public UGameplayEffect
+{
+    GENERATED_BODY()
+public:
+    UShadeAwarenessSuspiciousEffect();
+};
+
+UCLASS()
+class SHADE_API UShadeAwarenessAlertEffect : public UGameplayEffect
+{
+    GENERATED_BODY()
+public:
+    UShadeAwarenessAlertEffect();
+};
