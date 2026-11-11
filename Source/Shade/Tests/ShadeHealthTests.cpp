@@ -6,6 +6,7 @@
 #include "../Player/ShadePlayerState.h"
 #include "../AbilitySystem/ShadeAttributeSet.h"
 #include "../AbilitySystem/ShadeHealthEffects.h"
+#include "../AbilitySystem/ShadeGameplayTags.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FShadeHealthChangeTest, "Shade.Health.Change",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -25,6 +26,9 @@ bool FShadeHealthChangeTest::RunTest(const FString& Parameters)
     auto* State = World->SpawnActor<AShadePlayerState>(StateClass);
     auto* Avatar = World->SpawnActor<AActor>();
     if (!TestNotNull(TEXT("State"), State) || !TestNotNull(TEXT("Avatar"), Avatar)) return false;
+    TestEqual(TEXT("Before initialization Health is zero"), State->GetAttributeSet()->GetHealth(), 0.f);
+    TestFalse(TEXT("Uninitialized Health zero is not death"),
+        State->GetAbilitySystemComponent()->HasMatchingGameplayTag(ShadeGameplayTags::State_Dead));
     State->InitializeAbilitySystem(Avatar);
     auto* ASC = State->GetAbilitySystemComponent();
     const auto* Attributes = State->GetAttributeSet();

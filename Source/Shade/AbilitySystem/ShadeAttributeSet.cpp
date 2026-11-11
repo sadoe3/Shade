@@ -1,6 +1,9 @@
 #include "ShadeAttributeSet.h"
 
 #include "Net/UnrealNetwork.h"
+#include "GameplayEffectExtension.h"
+#include "ShadeGameplayTags.h"
+#include "ShadeHealthEffects.h"
 
 UShadeAttributeSet::UShadeAttributeSet()
 {
@@ -60,9 +63,24 @@ void UShadeAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute
     }
 }
 
+bool UShadeAttributeSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData& Data)
+{
+    // Revival is not implemented: a dead ASC cannot receive damage or healing modifiers.
+    if (Data.EvaluatedData.Attribute == GetHealthAttribute() &&
+        Data.Target.HasMatchingGameplayTag(ShadeGameplayTags::State_Dead)) return false;
+    return Super::PreGameplayEffectExecute(Data);
+}
+
 void UShadeAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
     Super::PostGameplayEffectExecute(Data);
-    // TODO: Handle death from the final Health after GE execution.
-    // GAS already applied the modifier; do not apply damage or clamp Health again here.
+    // GAS already applied the Health modifier; the Pre callbacks enforce its bounds.
+    // An uninitialized zero is not death. Only a completed Health GE enters this path.
+    if (Data.EvaluatedData.Attribute == GetHealthAttribute() && GetHealth() <= 0.f &&
+        Data.Target.IsOwnerActorAuthoritative() &&
+        !Data.Target.HasMatchingGameplayTag(ShadeGameplayTags::State_Dead))
+    {
+        Data.Target.ApplyGameplayEffectToSelf(GetDefault<UShadeDeadEffect>(), 1.f,
+            Data.EffectSpec.GetContext());
+    }
 }
